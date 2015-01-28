@@ -225,13 +225,102 @@ int parse_file(char* filename) {
 	return status;
 }
 
+/* helper function, flag == -1 or 1
+*/
+node* print_get_next(node* node, int flag) {
+	if(node == NULL) {
+		return NULL;
+	}
+	if(flag == -1) {
+		return node->prev_list;
+	} else if (flag == 1) {
+		return node->next_list;
+	} else {
+		fprintf(stderr, "Error: flag has to be -1 or 1\n");
+		return NULL;
+	}
+}
+
+/* print a doublly linked list in the hashtable, either from head or tail
+ * flag == 1: print from head;
+ * flag == -1: print from tail;
+ * other: illegal
+ */
+int print_double_list(char* start, char* end, hashtable* h, int flag) {
+	node* iterator;
+	// char start = "", end[4];
+	// char head[] = {'h', 'e', 'a', 'd'};
+	// char tail[] = {'t', 'a', 'i', 'l'};
+
+	if(h == NULL || start == NULL || end == NULL) {
+		fprintf(stderr, "Uninitialized arguments to print_double_list()!\n");
+		return 0;
+	}
+
+	if(flag == 1) {
+		if(h->head == NULL) {
+			printf("Empty hashtable!\n");
+			return 0;
+		}
+		iterator = h->head;
+	}
+	else if(flag == -1) {
+		if(h->tail == NULL) {
+			printf("Empty hashtable!\n");
+			return 0;
+		}
+		iterator = h->tail;
+	} else {
+		fprintf(stderr, "Illegal flag!\n");
+		return 0;
+	}
+
+	printf("%s-> ", start);
+	for( ; print_get_next(iterator, flag) != NULL; 
+		iterator = print_get_next(iterator, flag)) {
+		if(iterator->value == NULL) {
+			printf("NULL <=> ");
+		} else {
+			printf("%s <=> ", iterator->value);
+		}
+	}
+	printf("%s <- %s\n", iterator->value, end);
+	return 1;
+}
+
+int print_double_list_from_head(hashtable* h) {
+	return print_double_list("head", "tail", h, 1);
+}
+
+int print_double_list_from_tail(hashtable* h) {
+	return print_double_list("tail", "head", h, -1);
+}
 
 int main(int argc, char* argv[]) {
+	int return_value;
+	
+	//main program, tag counter
 	if(argc != 2 || argv[1] == NULL) {
 		fprintf(stderr, "Please specify a file to open.\n");
 		return 0;
 	} else {
-		return parse_file(argv[1]); 
+		return_value = parse_file(argv[1]); 
 	}
+
+	//extra credit part
+	printf("Extra credit:\n");
+	hashtable* h = initiate();
+	printf("Add one through five\n");
+	put("one", h);
+	put("two", h);
+	put("three", h);
+	put("four", h);
+	put("five", h);
+	print_double_list_from_head(h);
+	print_double_list_from_tail(h);
+	remove_node("four", h);
+	printf("remove four\n");
+	print_double_list_from_head(h);
+	print_double_list_from_tail(h);
 }
 

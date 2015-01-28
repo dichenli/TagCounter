@@ -59,10 +59,49 @@ node** find_bucket(char* string, hashtable* h, node** bucket_ptr) {
 	return bucket_ptr;
 }
 
+/* 
+ * return pointer to a node if a given linked list (the bucket) 
+ * has the given string, NULL if not
+ */
+node* find_node(node* head, char* string) {
+	if(string == NULL) {
+		fprintf(stderr, "Illegal arguments to find_node()\n");
+		return NULL;
+	}
+	while(head != NULL) {
+		if(strcmp(head->value, string) == 0) {
+			return head;
+		}
+		head = head->next;
+	}
+	return NULL;
+}
+
+/* given a string and the hashtable used, return a pointer to the node found
+*/
+node* get_node(char* string, hashtable* h) {
+	node** bucket_ptr = NULL;
+	if(h == NULL || string == NULL) {
+		fprintf(stderr, "Illegal arguments to get_node()\n");
+		return NULL;
+	}
+	
+	//find the bucket
+	bucket_ptr = find_bucket(string, h, bucket_ptr);
+	if(*bucket_ptr == NULL) { //bucket empty, so string not in hashatable
+		// fprintf(stderr, "Node not found!\n");
+		return NULL;
+	}
+
+	return find_node(*bucket_ptr, string);
+}
+
 /*
  * Create a new node with the string as the value, return the pointer to the new node. Return null if any error
  */
-node* create_node(char* string, unsigned int count) {
+node* create_node(char* string, unsigned int count, hashtable* h) {
+	// node* temp;
+
 	if(string == NULL) {
 		fprintf(stderr, "Illegal arguments to find_node()\n");
 		return NULL;
@@ -82,24 +121,50 @@ node* create_node(char* string, unsigned int count) {
 	}
 	(new_node->count) = count;
 	strcpy(new_node->value, string);
+	
+	//create double linked list
+	// temp = h->tail;
+	new_node->next_list = NULL;
+	new_node->prev_list = h->tail;
+	if(h->tail != NULL) { //the hashtable is not empty
+		h->tail->next_list = new_node;
+	} else { // the hashtable is empty
+		h->head = new_node;
+	}
+	h->tail = new_node;
 	return new_node;
 }
 
-/* 
- * return pointer to a node if a given linked list has the given string, NULL if not
+/* given a string and hashtable, find the node with the string, 
+ * delete the node from the hashtable
  */
-node* find_node(node* head, char* string) {
-	if(string == NULL) {
-		fprintf(stderr, "Illegal arguments to find_node()\n");
-		return NULL;
+int remove_node(char* string, hashtable* h) {
+	if(string == NULL || h == NULL) {
+		fprintf(stderr, "Illegal arguments for remove()\n");
 	}
-	while(head != NULL) {
-		if(strcmp(head->value, string) == 0) {
-			return head;
-		}
-		head = head->next;
+
+	node* node_removed = get_node(string, h);
+	if(node_removed == NULL) {
+		fprintf(stderr, "The string %s is not in the hashtable!\n", string);
+		return 0;
 	}
-	return NULL;
+
+	if(h->head == node_removed) {
+		h->head = node_removed->next_list;
+	}
+	if(h->tail == node_removed) {
+		h->tail = node_removed->prev_list;
+	}
+	if(node_removed->prev_list != NULL) {
+		node_removed->prev_list->next_list = node_removed->next_list;
+	}
+	if(node_removed->next_list != NULL) {
+		node_removed->next_list->prev_list = node_removed->prev_list;
+	}
+
+	free(node_removed->value);
+	free(node_removed);
+	return 1;
 }
 
 /*
@@ -128,7 +193,7 @@ int put(char* string, hashtable* h)
 	
 	//create new node
 	new_node = NULL;
-	new_node = create_node(string, 1);
+	new_node = create_node(string, 1, h);
 	if(new_node == NULL) {
 		return 0;
 	}
@@ -143,24 +208,11 @@ int put(char* string, hashtable* h)
  */
 int get(char* string, hashtable* h)
 {
-	node** bucket_ptr = NULL;
-	if(h == NULL || string == NULL) {
-		fprintf(stderr, "Illegal arguments to get()\n");
+	node* node_found = get_node(string, h);
+	if(node_found == NULL) {
 		return 0;
 	}
-	
-	//find the bucket
-	bucket_ptr = find_bucket(string, h, bucket_ptr);
-	if(*bucket_ptr == NULL) { //bucket empty, so string not in hashatable
-		return 0;
-	}
-	
-	//find the node
-	if(find_node(*bucket_ptr, string) == NULL) { //not found
-		return 0;
-	}
-	//found
-	return 1;
+	return node_found->count;
 }
 
 /*
@@ -176,6 +228,8 @@ hashtable* initiate() {
 	for(i = 0; i < CAPACITY; i++) {
 		h->list[i] = NULL;
 	}
+	h->head = NULL;
+	h->tail = NULL;
 	return h;
 }
 
